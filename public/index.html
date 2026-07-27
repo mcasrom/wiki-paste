@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WikiPaste</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0a0e17; color: #c8d6e5; padding: 20px; max-width: 900px; margin: 0 auto; }
+h1 { color: #00d4ff; font-size: 1.5em; margin-bottom: 15px; text-align: center; }
+.auth { max-width: 360px; margin: 60px auto; text-align: center; }
+.auth h2 { color: #4fc3f7; margin-bottom: 20px; }
+.auth input { width: 100%; background: #0a0e17; border: 1px solid #1a2a4a; border-radius: 6px; color: #c8d6e5; padding: 10px; font-size: 0.95em; outline: none; margin-bottom: 10px; }
+.auth input:focus { border-color: #00d4ff; }
+.auth .btn { width: 100%; padding: 10px; margin-bottom: 8px; }
+.auth .switch { color: #607d8b; font-size: 0.85em; cursor: pointer; }
+.auth .switch:hover { color: #4fc3f7; }
+.auth .error { color: #ff5252; font-size: 0.85em; margin-bottom: 10px; }
+.card { background: #111827; border: 1px solid #1a2a4a; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+textarea, input[type="text"], input[type="search"] { width: 100%; background: #0a0e17; border: 1px solid #1a2a4a; border-radius: 6px; color: #c8d6e5; padding: 10px; font-size: 0.95em; outline: none; }
+textarea:focus, input:focus { border-color: #00d4ff; }
+textarea { min-height: 60px; resize: vertical; font-family: inherit; }
+.btn { background: #1a2a4a; color: #00d4ff; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 0.85em; display: inline-block; }
+.btn:hover { backgrund: #2a3a5a; }
+.btn-primary { background: #00d4ff; color: #0a0e17; font-weight: 600; }
+.btn-primary:hover { background: #00b8d4; }
+.btn-danger { background: #4a1a1a; color: #ff5252; }
+.flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.gap { gap: 10px; }
+.mt { margin-top: 10px; }
+.mb { margin-bottom: 10px; }
+.flex-1 { flex: 1; }
+.text-xs { font-size: 0.75em; }
+.text-muted { color: #607d8b; }
+.note { background: #0d1520; border: 1px solid #1a2a4a; border-left: 3px solid #00d4ff; border-radius: 6px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
+.note:hover { border-color: #4fc3f7; }
+.note .title { color: #4fc3f7; font-weight: 600; font-size: 0.95em; }
+.note .preview { color: #78909c; font-size: 0.85em; margin-top: 3px; max-height: 3em; overflow: hidden; }
+.note .meta { color: #455a64; font-size: 0.75em; margin-top: 5px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 15px; }
+.tab { padding: 8px 16px; border-radius: 6px; cursor: pointer; color: #607d8b; font-size: 0.85em; background: transparent; border: 1px solid transparent; }
+.tab:hover { color: #c8d6e5; }
+.tab.active { background: #1a2a4a; color: #00d4ff; border-color: #1a2a4a; }
+.badge { background: #1a2a4a; color: #4fc3f7; font-size: 0.7em; padding: 2px 8px; border-radius: 10px; }
+.hidden { display: none; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.header .user { color: #607d8b; font-size: 0.85em; }
+.detail { background: #0d1520; border: 1px solid #1a2a4a; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+.detail h2 { color: #4fc3f7; font-size: 1.1em; margin-bottom: 8px; }
+.detail .content { line-height: 1.7; font-size: 0.95em; white-space: pre-wrap; word-break: break-word; }
+.wiki-link { color: #4fc3f7; text-decoration: none; border-bottom: 1px dashed #4fc3f7; cursor: pointer; }
+.wiki-link:hover { color: #00d4ff; }
+.wiki-link.missing { color: #ff5252; }
+.backlinks { margin-top: 10px; padding: 8px; background: #0a0e17; border-radius: 6px; }
+.backlinks a { color: #607d8b; text-decoration: none; display: block; padding: 2px 0; font-size: 0.85em; }
+.backlinks a:hover { color: #4fc3f7; }
+.pomodoro { text-align: center; padding: 15px; }
+.pomodoro .time { font-size: 3em; font-weight: 700; color: #00d4ff; }
+.pomodoro .stats { margin-top: 10px; color: #607d8b; font-size: 0.85em; }
+.empty { text-align: center; color: #455a64; padding: 30px; }
+</style>
+</head>
+<body>
+<div id="auth-screen" class="auth">
+  <h1>&#9889; WikiPaste</h1>
+  <h2 id="auth-title">Login</h2>
+  <div id="auth-error" class="error"></div>
+  <input type="text" id="auth-username" placeholder="usuario">
+  <input type="password" id="auth-password" placeholder="contrase&ntilde;a">
+  <button class="btn btn-primary" id="auth-btn" onclick="doAuth()">Entrar</button>
+  <div class="switch" id="auth-switch" onclick="toggleAuth()">No tienes cuenta? Registrate</div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="header">
+    <h1 style="margin:0;">&#9889; WikiPaste</h1>
+    <div class="flex">
+      <span class="user" id="username-display"></span>
+      <button class="btn text-xs" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('capture')">Capturar</div>
+    <div class="tab" onclick="switchTab('notes')">Notas</div>
+    <div class="tab" onclick="switchTab('pomodoro')">Pomodoro</div>
+  </div>
+
+  <div id="tab-capture">
+    <div class="card">
+      <input type="text" id="quick-idea" placeholder="Escribe y pulsa Enter..." style="padding:8px 10px;margin-bottom:8px;">
+      <textarea id="paste-area" placeholder="O pega texto (Ctrl+V)..." style="min-height:100px;"></textarea>
+      <div class="flex mt">
+        <div class="flex-1 text-xs text-muted" id="paste-source"></div>
+        <button class="btn btn-primary" onclick="savePaste()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-notes" class="hidden">
+    <div class="flex gap mb">
+      <input type="search" id="search" placeholder="Buscar..." oninput="loadNotes()" class="flex-1">
+      <select id="type-filter" onchange="loadNotes()" style="background:#0a0e17;border:1px solid #1a2a4a;border-radius:6px;color:#c8d6e5;padding:6px 10px;">
+        <option value="">Todas</option>
+        <option value="idea">Ideas</option>
+        <option value="paste">Pegadas</option>
+      </select>
+    </div>
+    <div id="note-list"></div>
+  </div>
+
+  <div id="tab-pomodoro" class="hidden">
+    <div class="card pomodoro">
+      <div class="time" id="pomodoro-time">25:00</div>
+      <div class="flex gap" style="justify-content:center;margin-top:10px;">
+        <button class="btn" onclick="setPomodoro(15)">15min</button>
+        <button class="btn btn-primary" onclick="setPomodoro(25)">25min</button>
+        <button class="btn" onclick="setPomodoro(45)">45min</button>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-primary" id="pomodoro-btn" onclick="togglePomodoro()">Iniciar</button>
+        <button class="btn" onclick="resetPomodoro()">Reiniciar</button>
+      </div>
+      <div class="stats" id="pomodoro-stats"></div>
+    </div>
+  </div>
+
+  <div id="detail-view" class="hidden"></div>
+</div>
+
+<script>
+const API = (path, opts) => {
+  const token = localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return fetch(path, { headers, ...opts });
+};
+
+let authMode = 'login';
+function toggleAuth() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  document.getElementById('auth-title').textContent = authMode === 'login' ? 'Login' : 'Registro';
+  document.getElementById('auth-btn').textContent = authMode === 'login' ? 'Entrar' : 'Crear cuenta';
+  document.getElementById('auth-switch').textContent = authMode === 'login' ? 'No tienes cuenta? Registrate' : 'Ya tienes cuenta? Login';
+}
+
+async function doAuth() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = 'Completa todos los campos'; return; }
+  const res = await API('/api/' + authMode, { method: 'POST', body: JSON.stringify({ username, password }) });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error; return; }
+  localStorage.setItem('token', data.token);
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('username-display').textContent = data.username;
+  loadNotes();
+  loadPomodoroStats();
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+// Check existing session
+const savedToken = localStorage.getItem('token');
+if (savedToken) {
+  API('/api/notes').then(r => {
+    if (r.ok) {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      r.json().then(() => { loadNotes(); loadPomodoroStats(); });
+    } else {
+      localStorage.removeItem('token');
+    }
+  });
+}
+
+// Paste source
+document.getElementById('paste-area').addEventListener('paste', (e) => {
+  const html = (e.clipboardData || window.clipboardData).getData('text/html');
+  const match = html && html.match(/<a[^>]+href=['"]([^'"]+)/i);
+  if (match) document.getElementById('paste-source').textContent = 'Fuente: ' + match[1];
+});
+
+// Quick idea: Enter
+document.getElementById('quick-idea').addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter' && e.target.value.trim()) {
+    await API('/api/notes', { method: 'POST', body: JSON.stringify({ content: e.target.value.trim() }) });
+    e.target.value = '';
+    if (!document.getElementById('tab-notes').classList.contains('hidden')) loadNotes();
+  }
+});
+
+async function savePaste() {
+  const content = document.getElementById('paste-area').value.trim();
+  if (!content) return;
+  const src = document.getElementById('paste-source');
+  const source_url = src.textContent.startsWith('Fuente:') ? src.textContent.replace('Fuente: ', '') : '';
+  await API('/api/notes', { method: 'POST', body: JSON.stringify({ content, source_url }) });
+  document.getElementById('paste-area').value = '';
+  src.textContent = '';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content, #tab-' + tab).forEach(el => el && (el.id === 'tab-' + tab ? el.classList.remove('hidden') : null));
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab')[['capture','notes','pomodoro'].indexOf(tab)].classList.add('active');
+  if (tab === 'notes') loadNotes();
+  if (tab === 'pomodoro') loadPomodoroStats();
+}
+
+let allNotes = [];
+async function loadNotes() {
+  const q = document.getElementById('search').value;
+  const type = document.getElementById('type-filter').value;
+  let url = '/api/notes?';
+  if (q) url += 'q=' + encodeURIComponent(q);
+  if (type) url += (q ? '&' : '') + 'type=' + type;
+  const res = await API(url);
+  allNotes = await res.json();
+  const el = document.getElementById('note-list');
+  if (!allNotes.length) { el.innerHTML = '<div class="empty">No hay notas</div>'; return; }
+  el.innerHTML = allNotes.map(n =>
+    '<div class="note" onclick="openNote(' + n.id + ')">' +
+      '<div class="title">' + (n.title || 'sin título') + '</div>' +
+      '<div class="preview">' + (n.content.length > 120 ? n.content.slice(0,120) + '...' : n.content) + '</div>' +
+      '<div class="flex meta"><span>' + (n.created_at || '').slice(0,10) + '</span><span class="badge">' + n.type + '</span></div>' +
+    '</div>'
+  ).join('');
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div'); d.textContent = t; return d.innerHTML;
+}
+
+function renderWiki(c) {
+  return escapeHtml(c).replace(/\[\[([^\]]+)\]\]/g, (m, name) =>
+    '<span class="wiki-link" onclick="openNoteByTitle(' + JSON.stringify(name) + ')">' + escapeHtml(name) + '</span>'
+  );
+}
+
+async function openNote(id) {
+  const res = await API('/api/notes/' + id);
+  if (!res.ok) return;
+  const data = await res.json();
+  const el = document.getElementById('detail-view');
+  el.classList.remove('hidden');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+  el.innerHTML =
+    '<div class="detail">' +
+      '<div class="flex" style="justify-content:space-between;">' +
+        '<h2>' + escapeHtml(data.note.title) + '</h2>' +
+        '<div><button class="btn btn-danger text-xs" onclick="deleteNote(' + id + ')">Borrar</button>' +
+        '<button class="btn text-xs" onclick="closeDetail()" style="margin-left:4px;">Cerrar</button></div>' +
+      '</div>' +
+      (data.note.source_url ? '<div class="text-xs text-muted mt">Fuente: <a href="' + escapeHtml(data.note.source_url) + '" target="_blank">' + escapeHtml(data.note.source_url) + '</a></div>' : '') +
+      '<div class="content mt">' + renderWiki(data.note.content) + '</div>' +
+      (data.links.length ? '<div class="backlinks"><div class="text-xs text-muted mb">Enlaces:</div>' + data.links.map(l => '<a href="#" onclick="event.preventDefault();' + (l.id ? 'openNote('+l.id+')' : 'openNoteByTitle('+JSON.stringify(l.name)+')') + '">' + escapeHtml(l.name) + '</a>').join('') + '</div>' : '') +
+      (data.backlinks.length ? '<div class="backlinks"><div class="text-xs text-muted mb">Referenciado por:</div>' + data.backlinks.map(b => '<a href="#" onclick="event.preventDefault();openNote('+b.id+')">' + escapeHtml(b.title) + '</a>').join('') + '</div>' : '') +
+    '</div>';
+}
+
+async function openNoteByTitle(title) {
+  const found = allNotes.find(n => n.title.toLowerCase() === title.toLowerCase());
+  if (found) { openNote(found.id); return; }
+  const res = await API('/api/notes?q=' + encodeURIComponent(title));
+  const notes = await res.json();
+  if (notes.length) openNote(notes[0].id);
+}
+
+async function deleteNote(id) {
+  if (!confirm('Borrar?')) return;
+  await API('/api/notes/' + id, { method: 'DELETE' });
+  closeDetail();
+  loadNotes();
+}
+
+function closeDetail() {
+  document.getElementById('detail-view').classList.add('hidden');
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('hidden'));
+}
+
+// Pomodoro
+let pomodoroSeconds = 25 * 60, pomodoroInterval = null, pomodoroRunning = false;
+function setPomodoro(m) { pomodoroSeconds = m * 60; updatePomodoroDisplay(); }
+function updatePomodoroDisplay() {
+  const m = Math.floor(pomodoroSeconds / 60), s = pomodoroSeconds % 60;
+  document.getElementById('pomodoro-time').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function togglePomodoro() {
+  if (pomodoroRunning) { clearInterval(pomodoroInterval); pomodoroRunning = false; document.getElementById('pomodoro-btn').textContent = 'Reanudar'; return; }
+  pomodoroInterval = setInterval(() => {
+    if (pomodoroSeconds <= 0) {
+      clearInterval(pomodoroInterval); pomodoroRunning = false;
+      document.getElementById('pomodoro-btn').textContent = 'Completado!';
+      API('/api/pomodoro', { method: 'POST', body: JSON.stringify({ duration: 25 }) });
+      loadPomodoroStats(); return;
+    }
+    pomodoroSeconds--; updatePomodoroDisplay();
+  }, 1000);
+  pomodoroRunning = true; document.getElementById('pomodoro-btn').textContent = 'Pausar';
+}
+function resetPomodoro() { clearInterval(pomodoroInterval); pomodoroRunning = false; pomodoroSeconds = 25 * 60; updatePomodoroDisplay(); document.getElementById('pomodoro-btn').textContent = 'Iniciar'; }
+async function loadPomodoroStats() { const r = await API('/api/pomodoro/stats'); const s = await r.json(); document.getElementById('pomodoro-stats').textContent = s.sessions + ' sesiones · ' + s.total_min + 'min'; }
+</script>
+</body>
+</html>
