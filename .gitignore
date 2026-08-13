@@ -4,3 +4,6 @@ node_modules/
 *.db-shm
 *.db-wal
 test.js
+
+*.db-shm
+*.db-wal
